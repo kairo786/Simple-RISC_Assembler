@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimpleRISC Assembler</title>
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/asm/asm.min.js"></script>
+
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .editor { display: flex; gap: 20px; }
+        #output { padding: 10px; border: 1px solid #ccc; min-height: 200px; width: 600px; }
+        .error { color: red; }
+        .CodeMirror { border: 1px solid #ccc; height: 400px; }
+        .a{
+            border: 2px solid black;
+            background-color: aqua;
+        }
+    </style>
+</head>
+<body>
+    <h1>SimpleRISC Assembler</h1>
+
+    <div class="editor">
+        <div>
+            <h3>Assembly Code:</h3>
+            <textarea  class="a" id="code" title="Assembly Code" placeholder="Enter your assembly code here"></textarea><br>
+            <button onclick="assemble()">Assemble</button>
+        </div>
+
+        <div>
+            <h3>Output:</h3>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <script>
+        var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+            lineNumbers: true,
+            mode: "text/x-asm",
+            theme: "default"
+        });
+
+        async function assemble() {
+            const code = editor.getValue();
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = "Assembling...";
+
+            try {
+                const response = await fetch('/assemble', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server Error (${response.status})`);
+                }
+
+                const data = await response.json();
+                const showBinary = document.getElementById('binaryToggle').checked;
+
+                let html = `<strong>${showBinary ? "Binary" : "Hexadecimal"} Machine Code:</strong><br>`;
+                data[showBinary ? "binary" : "output"].forEach((codeLine, index) => {
+                    html += `Line ${index + 1}: ${showBinary ? codeLine : ("0x" + codeLine)}<br>`;
+                });
+
+                document.getElementById('output').innerHTML = html;
+
+            } catch (error) {
+                document.getElementById('output').innerHTML =
+                    `<div class="error">Error during assembly: ${error.message}</div>`;
+                console.error('Assembly Error:', error);
+            }
+        }
+    </script>
+
+    <!-- Toggle for Binary Output -->
+    <label><input type="checkbox" id="binaryToggle"> Show Binary Output</label>
+
+</body>
+</html>
